@@ -2,11 +2,13 @@
 
 A modern, responsive file management dashboard built with React and Next.js.
 
+[See it in action](https://file-dashboard-em4n.vercel.app/).
+
 ## Features
 
 - Display files in a sortable, paginated table
-- Search functionality
 - File upload, edit, and delete operations
+- Search functionality
 - Bulk selection and actions
 - Responsive design for mobile and desktop
 
@@ -34,20 +36,4 @@ A modern, responsive file management dashboard built with React and Next.js.
 
 4. Should use authentication and more secure policies for storage.
 
-## API Requirements
-
-This component expects a backend API with the following endpoint:
-
-- `GET /api/files`: Fetch files with pagination, sorting, and search parameters
-
-## Customization
-
-The `FileTable` component can be easily customized by modifying the UI components or adjusting the API integration.
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License.
+5. Should add a script for seeding / uploading some sample files.
