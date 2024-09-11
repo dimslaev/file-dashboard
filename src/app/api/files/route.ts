@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
 }
 
 const bucketName = "files";
-const folderName = "private";
+const folderName = "uploads";
 
 export async function POST(req: NextRequest) {
   try {
@@ -140,35 +140,45 @@ export async function PUT(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
+    const ids = searchParams.get("ids");
 
-    if (!id) {
-      return NextResponse.json({ error: "Missing file ID" }, { status: 400 });
+    if (!ids) {
+      return NextResponse.json({ error: "Missing file IDs" }, { status: 400 });
     }
 
+    // Split the comma-separated IDs into an array
+    const idArray = ids.split(",");
+
+    // Fetch file data for all the IDs
     const { data: fileData, error: fetchError } = await supabase
       .from("files")
       .select("url")
-      .eq("id", id)
-      .single();
+      .in("id", idArray);
 
     if (fetchError) {
       throw fetchError;
     }
 
-    const fileName = fileData.url.split("/").pop();
+    // Extract the file paths
+    const filePaths = fileData.map((file) => {
+      const fileName = file.url.split("/").pop();
+      return `${folderName}/${fileName}`;
+    });
+
+    // Delete files from Supabase storage
     const { error: storageError } = await supabase.storage
       .from("files")
-      .remove([fileName]);
+      .remove(filePaths);
 
     if (storageError) {
       throw storageError;
     }
 
+    // Delete file records from the database
     const { error: deleteError } = await supabase
       .from("files")
       .delete()
-      .eq("id", id);
+      .in("id", idArray);
 
     if (deleteError) {
       throw deleteError;

@@ -106,16 +106,16 @@ interface FileItemProps {
 
 export const FileItem: React.FC<FileItemProps> = ({ file, icon, onRemove }) => {
   return (
-    <div className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-md">
+    <div className="flex items-center justify-between p-4 bg-card border border-border rounded-md">
       <div className="flex items-center">
         {icon && (
-          <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center mr-4">
+          <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center mr-4">
             {icon}
           </div>
         )}
 
         <div>
-          <p className="text-gray-800 font-medium">{file.name}</p>
+          <p className="text-card-foreground font-medium">{file.name}</p>
           <p className="text-gray-500 text-sm">{formatFileSize(file.size)}</p>
         </div>
       </div>

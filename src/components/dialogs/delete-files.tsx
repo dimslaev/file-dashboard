@@ -28,7 +28,7 @@ export const DeleteFilesDialog = ({
   const queryClient = useQueryClient();
 
   const deleteMutation = useMutation(
-    (id: string) => axios.delete(`/api/files?id=${id}`),
+    (ids: string[]) => axios.delete(`/api/files?ids=${ids.join(",")}`),
     {
       onSuccess: () => {
         queryClient.invalidateQueries(["files"]);
@@ -40,9 +40,9 @@ export const DeleteFilesDialog = ({
 
   const onConfirm = () => {
     if (deletingFile) {
-      deleteMutation.mutate(deletingFile.id);
+      deleteMutation.mutate([deletingFile.id]);
     } else {
-      selectedFiles.forEach((id) => deleteMutation.mutate(id));
+      deleteMutation.mutate(selectedFiles);
     }
   };
 

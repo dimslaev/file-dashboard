@@ -129,6 +129,18 @@ const FileTable = () => {
     setSelectedFiles([]);
   };
 
+  const handleDownload = (url: string) => {
+    fetch(url)
+      .then((response) => response.blob())
+      .then((blob) => {
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = url.split("/").pop()!;
+        link.click();
+      })
+      .catch(console.error);
+  };
+
   const handlePageChange = (newPage: number) => {
     const totalPages = data?.totalPages || 1;
     if (newPage >= 1 && newPage <= totalPages) {
@@ -166,7 +178,10 @@ const FileTable = () => {
       <TableRow>
         <TableHead className="pt-1 hidden md:table-cell">
           <Checkbox
-            checked={selectedFiles.length === data?.files?.length}
+            checked={
+              selectedFiles.length > 0 &&
+              selectedFiles.length === data?.files?.length
+            }
             onCheckedChange={toggleSelectAll}
           />
         </TableHead>
@@ -185,7 +200,7 @@ const FileTable = () => {
             </TableHead>
           )
         )}
-        <TableHead className="text-right hidden">Actions</TableHead>
+        <TableHead></TableHead>
       </TableRow>
     </TableHeader>
   );
@@ -237,7 +252,14 @@ const FileTable = () => {
 
   const renderActionButtons = (file: FileRecord) => (
     <>
-      <div className="hidden md:flex justify-end">
+      <div className="hidden lg:flex justify-end">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleDownload(file.url)}
+        >
+          <DownloadSimple className="h-4 w-4" />
+        </Button>
         <Button
           variant="ghost"
           size="sm"
@@ -259,7 +281,7 @@ const FileTable = () => {
           <Trash className="h-4 w-4" />
         </Button>
       </div>
-      <div className="flex justify-end md:hidden">
+      <div className="flex justify-end lg:hidden">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -267,13 +289,17 @@ const FileTable = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleDownload(file.url)}>
+              <DownloadSimple className="h-4 w-4 mr-2" /> Download
+            </DropdownMenuItem>
+
             <DropdownMenuItem
               onClick={() => {
                 setEditingFile(file);
                 setIsEditDialogOpen(true);
               }}
             >
-              Edit
+              <PencilSimple className="h-4 w-4 mr-2" /> Edit
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
@@ -281,7 +307,7 @@ const FileTable = () => {
                 setIsDeleteDialogOpen(true);
               }}
             >
-              Delete
+              <Trash className="h-4 w-4 mr-2" /> Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -290,8 +316,8 @@ const FileTable = () => {
   );
 
   return (
-    <div className="max-w-5xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">File dashboard</h1>
+    <div className="max-w-5xl mx-auto px-4 py-16">
+      <h1 className="text-2xl font-bold mb-8">File dashboard</h1>
       <div className="flex justify-between items-center gap-4 mb-4">
         <div className="relative">
           <Input
@@ -311,7 +337,21 @@ const FileTable = () => {
                 ? `Delete (${selectedFiles.length})`
                 : "Delete all"}
             </Button>
-            <Button variant="ghost" onClick={() => console.log("Download all")}>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const files =
+                  selectedFiles.length === 0
+                    ? data?.files || []
+                    : (data?.files || []).filter((it) =>
+                        selectedFiles.includes(it.id)
+                      );
+                const urls = files.map((it) => it.url);
+                urls.forEach((it) => {
+                  handleDownload(it);
+                });
+              }}
+            >
               <DownloadSimple className="mr-2 size-4" />
               {selectedFiles.length > 0
                 ? `Download (${selectedFiles.length})`
@@ -355,7 +395,11 @@ const FileTable = () => {
       {isDeleteDialogOpen && (
         <DeleteFilesDialog
           isOpen={true}
-          selectedFiles={selectedFiles}
+          selectedFiles={
+            selectedFiles.length
+              ? selectedFiles
+              : data?.files?.map((it) => it.id) || []
+          }
           deletingFile={deletingFile}
           onSuccess={resetSelections}
           onClose={() => setIsDeleteDialogOpen(false)}
