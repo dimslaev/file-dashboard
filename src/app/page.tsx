@@ -51,6 +51,45 @@ import {
   MagnifyingGlass,
 } from "@phosphor-icons/react";
 
+const cols: {
+  id: keyof FileRecord;
+  title: string;
+  className: string;
+  sortable: boolean;
+}[] = [
+  {
+    id: "name",
+    title: "Name",
+    className:
+      "w-[50%] md:w-[30%] overflow-hidden text-ellipsis whitespace-nowrap",
+    sortable: true,
+  },
+  {
+    id: "size",
+    title: "Size",
+    className: "whitespace-nowrap",
+    sortable: true,
+  },
+  {
+    id: "uploaded_at",
+    title: "Uploaded",
+    className: "hidden md:table-cell whitespace-nowrap",
+    sortable: true,
+  },
+  {
+    id: "updated_at",
+    title: "Updated",
+    className: "hidden md:table-cell whitespace-nowrap",
+    sortable: true,
+  },
+  {
+    id: "visibility",
+    title: "Visibility",
+    className: "whitespace-nowrap",
+    sortable: true,
+  },
+];
+
 const FileTable = () => {
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
@@ -176,7 +215,7 @@ const FileTable = () => {
   const renderTableHeader = () => (
     <TableHeader>
       <TableRow>
-        <TableHead className="pt-1 hidden md:table-cell">
+        <TableHead className="pt-1 hidden md:table-cell w-[50px]">
           <Checkbox
             checked={
               selectedFiles.length > 0 &&
@@ -185,22 +224,17 @@ const FileTable = () => {
             onCheckedChange={toggleSelectAll}
           />
         </TableHead>
-        {["name", "size", "uploaded_at", "updated_at", "visibility"].map(
-          (column) => (
-            <TableHead
-              key={column}
-              onClick={() => handleSort(column as keyof FileRecord)}
-              className={`cursor-pointer ${
-                column.includes("_at") ? "hidden md:table-cell" : ""
-              }`}
-            >
-              {column.charAt(0).toUpperCase() +
-                column.slice(1).replace("_", " ")}
-              <SortIcon column={column as keyof FileRecord} />
-            </TableHead>
-          )
-        )}
-        <TableHead></TableHead>
+        {cols.map((column) => (
+          <TableHead
+            key={column.id}
+            onClick={() => handleSort(column.id)}
+            className={column.className}
+          >
+            {column.title}
+            {column.sortable && <SortIcon column={column.id} />}
+          </TableHead>
+        ))}
+        <TableHead className="w-[50px] md:w-[110px]"></TableHead>
       </TableRow>
     </TableHeader>
   );
@@ -216,20 +250,27 @@ const FileTable = () => {
             />
           </TableCell>
           <TableCell className="font-medium">
-            <div className="flex items-center">
+            <a
+              className="flex items-center hover:text-primary"
+              onClick={(e) => {
+                e.preventDefault();
+                handleDownload(file.url);
+              }}
+              href={file.url}
+            >
               <span className="hidden md:inline mr-2">
                 <FileIcon file={file} />
               </span>
-              <div className="overflow-hidden overflow-ellipsis max-w-[28vw]">
+              <div className="whitespace-nowrap text-ellipsis overflow-hidden">
                 {file.name}
               </div>
-            </div>
+            </a>
           </TableCell>
           <TableCell>{formatFileSize(file.size)}</TableCell>
-          <TableCell className="hidden md:table-cell">
+          <TableCell className="hidden md:table-cell whitespace-nowrap">
             {format(new Date(file.uploaded_at), "MMM d, yyyy")}
           </TableCell>
-          <TableCell className="hidden md:table-cell">
+          <TableCell className="hidden md:table-cell whitespace-nowrap">
             {format(new Date(file.updated_at), "MMM d, yyyy")}
           </TableCell>
           <TableCell>
@@ -253,13 +294,6 @@ const FileTable = () => {
   const renderActionButtons = (file: FileRecord) => (
     <>
       <div className="hidden lg:flex justify-end">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => handleDownload(file.url)}
-        >
-          <DownloadSimple className="h-4 w-4" />
-        </Button>
         <Button
           variant="ghost"
           size="sm"
@@ -359,13 +393,13 @@ const FileTable = () => {
             </Button>
           </div>
           <Button onClick={() => setIsUploadDialogOpen(true)}>
-            <Upload className="md:mr-2 size-4" />
-            <span className="hidden md:inline">Upload File</span>
+            <Upload className=" mr-2 size-4" />
+            Upload File
           </Button>
         </div>
       </div>
 
-      <Table>
+      <Table className="table-fixed">
         {renderTableHeader()}
         {renderTableBody()}
       </Table>
