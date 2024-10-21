@@ -100,7 +100,10 @@ export const UpdateFileDialog = ({
               </div>
             </div>
           </div>
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="secondary" onClick={onClose}>
+              Cancel
+            </Button>
             <Button type="submit">
               Update
               {updateMutation.isLoading && (

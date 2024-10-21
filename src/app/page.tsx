@@ -51,20 +51,58 @@ import {
   MagnifyingGlass,
 } from "@phosphor-icons/react";
 
+const cols: {
+  id: keyof FileRecord;
+  title: string;
+  className: string;
+  sortable: boolean;
+}[] = [
+  {
+    id: "name",
+    title: "Name",
+    className:
+      "w-[50%] md:w-[30%] overflow-hidden text-ellipsis whitespace-nowrap",
+    sortable: true,
+  },
+  {
+    id: "size",
+    title: "Size",
+    className: "whitespace-nowrap",
+    sortable: true,
+  },
+  {
+    id: "uploaded_at",
+    title: "Uploaded",
+    className: "hidden md:table-cell whitespace-nowrap",
+    sortable: true,
+  },
+  {
+    id: "updated_at",
+    title: "Updated",
+    className: "hidden md:table-cell whitespace-nowrap",
+    sortable: true,
+  },
+  {
+    id: "visibility",
+    title: "Visibility",
+    className: "whitespace-nowrap",
+    sortable: true,
+  },
+];
+
 const FileTable = () => {
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
-  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [editingFile, setEditingFile] = useState<FileRecord | null>(null);
-  const [deletingFile, setDeletingFile] = useState<FileRecord | null>(null);
+  const [selectedFile, setSelectedFile] = useState<FileRecord | null>(null);
+  const [openDialog, setOpenDialog] = useState<
+    "edit" | "upload" | "delete" | null
+  >(null);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
   const [sortBy, setSortBy] = useState<keyof FileRecord>("updated_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [searchTerm, setSearchTerm] = useState("");
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
-
   const { data, isLoading } = useQuery<{
     currentPage: number;
     totalPages: number;
@@ -80,6 +118,7 @@ const FileTable = () => {
         ...(debouncedSearchTerm && { fileName: debouncedSearchTerm }),
       });
       const response = await axios.get(`/api/files?${params}`);
+      setIsInitialLoad(false);
       return response.data;
     },
     {
@@ -124,9 +163,9 @@ const FileTable = () => {
   };
 
   const resetSelections = () => {
-    setEditingFile(null);
-    setDeletingFile(null);
+    setSelectedFile(null);
     setSelectedFiles([]);
+    setOpenDialog(null);
   };
 
   const handleDownload = (url: string) => {
@@ -176,7 +215,7 @@ const FileTable = () => {
   const renderTableHeader = () => (
     <TableHeader>
       <TableRow>
-        <TableHead className="pt-1 hidden md:table-cell">
+        <TableHead className="pt-1 hidden md:table-cell w-[50px]">
           <Checkbox
             checked={
               selectedFiles.length > 0 &&
@@ -185,70 +224,96 @@ const FileTable = () => {
             onCheckedChange={toggleSelectAll}
           />
         </TableHead>
-        {["name", "size", "uploaded_at", "updated_at", "visibility"].map(
-          (column) => (
-            <TableHead
-              key={column}
-              onClick={() => handleSort(column as keyof FileRecord)}
-              className={`cursor-pointer ${
-                column.includes("_at") ? "hidden md:table-cell" : ""
-              }`}
-            >
-              {column.charAt(0).toUpperCase() +
-                column.slice(1).replace("_", " ")}
-              <SortIcon column={column as keyof FileRecord} />
-            </TableHead>
-          )
-        )}
-        <TableHead></TableHead>
+        {cols.map((column) => (
+          <TableHead
+            key={column.id}
+            onClick={() => handleSort(column.id)}
+            className={column.className}
+          >
+            {column.title}
+            {column.sortable && <SortIcon column={column.id} />}
+          </TableHead>
+        ))}
+        <TableHead className="w-[50px] md:w-[110px]"></TableHead>
       </TableRow>
     </TableHeader>
   );
 
-  const renderTableBody = () => (
-    <TableBody>
-      {data?.files?.map((file) => (
-        <TableRow key={file.id} className={isLoading ? "opacity-50" : ""}>
-          <TableCell className="pt-5 hidden md:table-cell">
-            <Checkbox
-              checked={selectedFiles.includes(file.id)}
-              onCheckedChange={() => toggleFileSelection(file.id)}
-            />
-          </TableCell>
-          <TableCell className="font-medium">
-            <div className="flex items-center">
-              <span className="hidden md:inline mr-2">
-                <FileIcon file={file} />
-              </span>
-              <div className="overflow-hidden overflow-ellipsis max-w-[28vw]">
-                {file.name}
-              </div>
-            </div>
-          </TableCell>
-          <TableCell>{formatFileSize(file.size)}</TableCell>
-          <TableCell className="hidden md:table-cell">
-            {format(new Date(file.uploaded_at), "MMM d, yyyy")}
-          </TableCell>
-          <TableCell className="hidden md:table-cell">
-            {format(new Date(file.updated_at), "MMM d, yyyy")}
-          </TableCell>
-          <TableCell>
-            <span
-              className={cn(
-                "px-2 py-1 rounded-full text-xs uppercase",
-                file.visibility === "public"
-                  ? "bg-green-100 text-green-800"
-                  : "bg-yellow-100 text-yellow-800"
-              )}
-            >
-              {file.visibility}
+  const renderTableRows = () =>
+    data?.files?.map((file) => (
+      <TableRow key={file.id}>
+        <TableCell className="pt-5 hidden md:table-cell">
+          <Checkbox
+            checked={selectedFiles.includes(file.id)}
+            onCheckedChange={() => toggleFileSelection(file.id)}
+          />
+        </TableCell>
+        <TableCell className="font-medium">
+          <a
+            className="flex items-center hover:text-primary"
+            onClick={(e) => {
+              e.preventDefault();
+              handleDownload(file.url);
+            }}
+            href={file.url}
+          >
+            <span className="hidden md:inline mr-2">
+              <FileIcon file={file} />
             </span>
-          </TableCell>
-          <TableCell>{renderActionButtons(file)}</TableCell>
-        </TableRow>
-      ))}
-    </TableBody>
-  );
+            <div className="whitespace-nowrap text-ellipsis overflow-hidden">
+              {file.name}
+            </div>
+          </a>
+        </TableCell>
+        <TableCell>{formatFileSize(file.size)}</TableCell>
+        <TableCell className="hidden md:table-cell whitespace-nowrap">
+          {format(new Date(file.uploaded_at), "MMM d, yyyy")}
+        </TableCell>
+        <TableCell className="hidden md:table-cell whitespace-nowrap">
+          {format(new Date(file.updated_at), "MMM d, yyyy")}
+        </TableCell>
+        <TableCell>
+          <span
+            className={cn(
+              "px-2 py-1 rounded-full text-xs uppercase",
+              file.visibility === "public"
+                ? "bg-green-100 text-green-800"
+                : "bg-yellow-100 text-yellow-800"
+            )}
+          >
+            {file.visibility}
+          </span>
+        </TableCell>
+        <TableCell>{renderActionButtons(file)}</TableCell>
+      </TableRow>
+    ));
+
+  const renderTableLoading = () =>
+    Array.from({ length: 5 }).map((_, index) => (
+      <TableRow key={`row-loading-${index}`} className="animate-pulse">
+        <TableCell className="pt-5 hidden md:table-cell">
+          <div className="h-4 bg-gray-200 rounded"></div>
+        </TableCell>
+        <TableCell className="font-medium">
+          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+        </TableCell>
+        <TableCell>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+        </TableCell>
+        <TableCell className="hidden md:table-cell whitespace-nowrap">
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+        </TableCell>
+        <TableCell className="hidden md:table-cell whitespace-nowrap">
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+        </TableCell>
+        <TableCell>
+          <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+        </TableCell>
+        <TableCell>
+          <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+        </TableCell>
+      </TableRow>
+    ));
 
   const renderActionButtons = (file: FileRecord) => (
     <>
@@ -256,16 +321,9 @@ const FileTable = () => {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => handleDownload(file.url)}
-        >
-          <DownloadSimple className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
           onClick={() => {
-            setEditingFile(file);
-            setIsEditDialogOpen(true);
+            setSelectedFile(file);
+            setOpenDialog("edit");
           }}
         >
           <PencilSimple className="h-4 w-4" />
@@ -274,8 +332,8 @@ const FileTable = () => {
           variant="ghost"
           size="sm"
           onClick={() => {
-            setDeletingFile(file);
-            setIsDeleteDialogOpen(true);
+            setSelectedFile(file);
+            setOpenDialog("delete");
           }}
         >
           <Trash className="h-4 w-4" />
@@ -295,16 +353,16 @@ const FileTable = () => {
 
             <DropdownMenuItem
               onClick={() => {
-                setEditingFile(file);
-                setIsEditDialogOpen(true);
+                setSelectedFile(file);
+                setOpenDialog("edit");
               }}
             >
               <PencilSimple className="h-4 w-4 mr-2" /> Edit
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
-                setDeletingFile(file);
-                setIsDeleteDialogOpen(true);
+                setSelectedFile(file);
+                setOpenDialog("delete");
               }}
             >
               <Trash className="h-4 w-4 mr-2" /> Delete
@@ -331,43 +389,26 @@ const FileTable = () => {
         </div>
         <div className="flex justify-end gap-2">
           <div className="hidden md:flex justify-end gap-2">
-            <Button onClick={() => setIsDeleteDialogOpen(true)} variant="ghost">
-              <Trash className="mr-2 size-4" />
-              {selectedFiles.length > 0
-                ? `Delete (${selectedFiles.length})`
-                : "Delete all"}
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                const files =
-                  selectedFiles.length === 0
-                    ? data?.files || []
-                    : (data?.files || []).filter((it) =>
-                        selectedFiles.includes(it.id)
-                      );
-                const urls = files.map((it) => it.url);
-                urls.forEach((it) => {
-                  handleDownload(it);
-                });
-              }}
-            >
-              <DownloadSimple className="mr-2 size-4" />
-              {selectedFiles.length > 0
-                ? `Download (${selectedFiles.length})`
-                : "Download all"}
-            </Button>
+            {selectedFiles.length > 0 && (
+              <Button onClick={() => setOpenDialog("delete")} variant="ghost">
+                <Trash className="mr-2 size-4" />
+                Delete ({selectedFiles.length})
+              </Button>
+            )}
           </div>
-          <Button onClick={() => setIsUploadDialogOpen(true)}>
-            <Upload className="md:mr-2 size-4" />
-            <span className="hidden md:inline">Upload File</span>
+          <Button onClick={() => setOpenDialog("upload")}>
+            <Upload className=" mr-2 size-4" />
+            Upload File
           </Button>
         </div>
       </div>
 
-      <Table>
+      <Table className="table-fixed">
         {renderTableHeader()}
-        {renderTableBody()}
+        <TableBody>
+          {isInitialLoad && renderTableLoading()}
+          {renderTableRows()}
+        </TableBody>
       </Table>
 
       <Pagination className="mt-4">
@@ -392,37 +433,38 @@ const FileTable = () => {
         </PaginationContent>
       </Pagination>
 
-      {isDeleteDialogOpen && (
+      {openDialog === "delete" && (
         <DeleteFilesDialog
-          isOpen={true}
-          selectedFiles={
-            selectedFiles.length
-              ? selectedFiles
-              : data?.files?.map((it) => it.id) || []
-          }
-          deletingFile={deletingFile}
-          onSuccess={resetSelections}
-          onClose={() => setIsDeleteDialogOpen(false)}
-        />
-      )}
-
-      {isUploadDialogOpen && (
-        <UploadFileDialog
+          selectedFiles={selectedFiles}
+          file={selectedFile}
           isOpen={true}
           onSuccess={resetSelections}
           onClose={() => {
-            setIsUploadDialogOpen(false);
-            setSelectedFiles([]);
+            setOpenDialog(null);
+            setSelectedFile(null);
           }}
         />
       )}
 
-      {editingFile && isEditDialogOpen && (
-        <UpdateFileDialog
+      {openDialog === "upload" && (
+        <UploadFileDialog
           isOpen={true}
           onSuccess={resetSelections}
-          onClose={() => setIsEditDialogOpen(false)}
-          file={editingFile}
+          onClose={() => {
+            setOpenDialog(null);
+          }}
+        />
+      )}
+
+      {selectedFile && openDialog === "edit" && (
+        <UpdateFileDialog
+          file={selectedFile}
+          isOpen={true}
+          onSuccess={resetSelections}
+          onClose={() => {
+            setOpenDialog(null);
+            setSelectedFile(null);
+          }}
         />
       )}
     </div>

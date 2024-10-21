@@ -14,12 +14,12 @@ import { Spinner } from "@phosphor-icons/react";
 
 export const DeleteFilesDialog = ({
   selectedFiles,
-  deletingFile,
+  file,
   isOpen,
   onClose,
   onSuccess,
 }: {
-  deletingFile: FileRecord | null;
+  file: FileRecord | null;
   selectedFiles: string[];
   isOpen: boolean;
   onClose: () => void;
@@ -39,8 +39,8 @@ export const DeleteFilesDialog = ({
   );
 
   const onConfirm = () => {
-    if (deletingFile) {
-      deleteMutation.mutate([deletingFile.id]);
+    if (file) {
+      deleteMutation.mutate([file.id]);
     } else {
       deleteMutation.mutate(selectedFiles);
     }
@@ -50,15 +50,16 @@ export const DeleteFilesDialog = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
-          <DialogTitle>
-            {deletingFile ? "Delete File" : "Delete Files"}
-          </DialogTitle>
+          <DialogTitle>{file ? "Delete File" : "Delete Files"}</DialogTitle>
         </DialogHeader>
 
-        {deletingFile ? (
+        {file ? (
           <div>Are you sure you want to delete this file?</div>
         ) : (
-          <div>Are you sure you want to delete the selected files?</div>
+          <div>
+            Are you sure you want to delete the selected files (
+            {selectedFiles.length}) ?
+          </div>
         )}
 
         <div className="flex justify-end gap-2">
